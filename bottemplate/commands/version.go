@@ -10,6 +10,7 @@ import (
 	"github.com/disgoorg/disgo/handler"
 
 	"github.com/disgoorg/bot-template/bottemplate"
+	"github.com/disgoorg/bot-template/bottemplate/messageTools"
 )
 
 var version = discord.SlashCommandCreate{
@@ -47,43 +48,20 @@ func VersionHandler(b *bottemplate.Bot) handler.CommandHandler {
 		}
 
 		latest := commits[0]
-		fmt.Printf("Latest Commit:\n")
-		fmt.Printf("SHA: %s\n", latest.SHA)
-		fmt.Printf("Message: %s\n", latest.Commit.Message)
-		fmt.Printf("Date: %s\n", latest.Commit.Author.Date.Format(time.RFC1123))
+
+		fieldsMap := map[string]string{
+			"SHA":     latest.SHA,
+			"Message": latest.Commit.Message,
+			"Date":    latest.Commit.Author.Date.Format(time.RFC1123),
+		}
 
 		// Construct the embed message
-		embed := discord.Embed{
-			Title:       "Version info",
-			Description: fmt.Sprintf("Details about github.com/%s/%s", owner, repo),
-			Color:       0x00ffcc, // Optional: Embed sidebar color
-			Fields: []discord.EmbedField{
-				{
-					Name:   "SHA",
-					Value:  latest.SHA,
-					Inline: BoolPtr(true),
-				},
-				{
-					Name:   "Message",
-					Value:  latest.Commit.Message,
-					Inline: BoolPtr(true),
-				},
-				{
-					Name:   "Date",
-					Value:  latest.Commit.Author.Date.Format(time.RFC1123),
-					Inline: BoolPtr(true),
-				},
-			},
-		}
+		embed := messageTools.CreateEmbed("version information", fmt.Sprintf("Details about github.com/%s/%s", owner, repo), fieldsMap)
 
 		return e.CreateMessage(discord.MessageCreate{
 			Embeds: []discord.Embed{embed},
 		})
 	}
-}
-
-func BoolPtr(b bool) *bool {
-	return &b
 }
 
 func noCommitFound() string {
