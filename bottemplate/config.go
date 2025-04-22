@@ -23,8 +23,9 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 type Config struct {
-	Log LogConfig `toml:"log"`
-	Bot BotConfig `toml:"bot"`
+	Log   LogConfig   `toml:"log"`
+	Bot   BotConfig   `toml:"bot"`
+	MySQL MySQLConfig `toml:"mysql"`
 }
 
 type BotConfig struct {
@@ -36,4 +37,12 @@ type LogConfig struct {
 	Level     slog.Level `toml:"level"`
 	Format    string     `toml:"format"`
 	AddSource bool       `toml:"add_source"`
+}
+
+type MySQLConfig struct {
+	DbServer   string `toml:"dbserver"`
+	DbName     string `toml:"dbname"`
+	DbUser     string `toml:"dbuser"`
+	DbPassword string `toml:"dbpassword"`
+	DbPort     int    `toml:"dbport"`
 }

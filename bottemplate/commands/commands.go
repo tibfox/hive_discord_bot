@@ -6,4 +6,5 @@ var Commands = []discord.ApplicationCommandCreate{
 	test,
 	balance,
 	version,
+	checklink,
 }
