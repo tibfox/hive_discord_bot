@@ -9,6 +9,9 @@ import (
 
 	"github.com/disgoorg/bot-template/era2bot"
 	"github.com/disgoorg/bot-template/era2bot/hiveTools"
+	"github.com/disgoorg/bot-template/era2bot/internal/enums"
+	"github.com/disgoorg/bot-template/era2bot/internal/models"
+	"github.com/disgoorg/bot-template/era2bot/internal/services"
 	"github.com/disgoorg/bot-template/era2bot/messageTools"
 	"github.com/disgoorg/bot-template/era2bot/mySqlTools"
 	"github.com/disgoorg/bot-template/era2bot/restTools"
@@ -27,28 +30,37 @@ var checklink = discord.SlashCommandCreate{
 	},
 }
 
+var AllCheckSteps = []enums.PossibleCheckStep{
+	enums.CheckLinkFormat,
+	enums.CheckPostAge,
+	enums.CheckAlreadyVoted,
+	enums.CheckOurVP,
+	enums.CheckInternalBlacklist,
+	enums.CheckExternalBlacklist,
+	enums.CheckGlobalQueue,
+	enums.CheckPersonalQueue,
+	enums.CheckPersonalCurations,
+	enums.CheckWordCount,
+	enums.CheckPlagiarismCheck,
+}
+
 // Handler for the command
 func CheckLinkHandler(b *era2bot.Bot) handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
 		url := e.SlashCommandInteractionData().String("url")
-		keys := []string{
-			"link format",
-			"post age",
-			"already voted",
-			"our Voting Power",
-			"internal blacklist",
-			"spaminator blacklist",
-			"global queue",
-			"your queue",
-			"your curations",
-			"word count",
-			"plagiarism check"}
+		curatorDiscordUserId := e.Member().User.ID.String()
+		curatorService := services.NewCuratorService()
+		curator, _ := curatorService.GetCurator(nil, &curatorDiscordUserId)
+
 		fieldsMap := make(map[string]string)
-		for i, key := range keys {
+		keys := make([]string, 0, len(fieldsMap))
+
+		for i, key := range AllCheckSteps {
+			keys = append(keys, key.String())
 			if i == 0 {
-				fieldsMap[key] = "1running..."
+				fieldsMap[key.String()] = "1running..."
 			} else {
-				fieldsMap[key] = "0waiting..."
+				fieldsMap[key.String()] = "0waiting..."
 			}
 
 		}
@@ -70,10 +82,10 @@ func CheckLinkHandler(b *era2bot.Bot) handler.CommandHandler {
 		}
 		author := ""
 		permlink := ""
-
-		for i, k := range keys {
-
-			if k == "link format" {
+		// TODO: extract logic into a service(?)
+		for i, k := range AllCheckSteps {
+			switch k {
+			case enums.CheckLinkFormat:
 				a, p, error := restTools.ParseHiveLink(url)
 				if error != nil {
 					fieldsMap[keys[i]] = "4" + error.Error()
@@ -83,20 +95,80 @@ func CheckLinkHandler(b *era2bot.Bot) handler.CommandHandler {
 					fieldsMap[keys[i]] = fmt.Sprintf("2we are checking %s/%s", author, permlink)
 
 				}
-			} else if k == "already voted" {
+			case enums.CheckAlreadyVoted:
 				alreadyVoted, _ := hiveTools.HasVoted(author, permlink, "diyhub")
 				fieldsMap[keys[i]] = alreadyVoted
 
-			} else if k == "our Voting Power" {
+			case enums.CheckOurVP:
 				enoughVP, _ := hiveTools.GetVotingPowerPercent("diyhub")
 				fieldsMap[keys[i]] = enoughVP
 
-			} else if k == "spaminator blacklist" {
+			case enums.CheckExternalBlacklist:
 				fieldsMap[keys[i]] = restTools.CheckSpaminator(&author)
-			} else if k == "post age" {
+			case enums.CheckPostAge:
 				postAgeReturnValue, _ := hiveTools.PostAge(&author, &permlink)
 				fieldsMap[keys[i]] = postAgeReturnValue
-			} else if k == "internal blacklist" {
+
+			case enums.CheckInternalBlacklist:
+				authorService := services.NewAuthorService()
+				authorObject, err := authorService.GetAuthor(&author)
+				if authorObject == nil {
+					fieldsMap[keys[i]] = fmt.Sprintf("5skip: author not found: %w", err)
+				} else {
+					if authorObject.BlacklistedBy != "" {
+						fieldsMap[keys[i]] = fmt.Sprintf("4author blacklisted by %s: %s", authorObject.BlacklistedBy, authorObject.BlacklistReason)
+					} else {
+						fieldsMap[keys[i]] = "2author is okay"
+					}
+				}
+
+			case enums.CheckGlobalQueue:
+				// Create service
+				queueService := services.NewQueueService()
+
+				// Call service
+				queue, err := queueService.GetQueue(models.GlobalQueue, nil)
+				if err != nil {
+					fieldsMap[keys[i]] = "5queue not available"
+				} else {
+					if queue.Count > 5 {
+						fieldsMap[keys[i]] = "4queue is full - please try again soon"
+					} else {
+						fieldsMap[keys[i]] = "2queue is okay"
+					}
+				}
+			case enums.CheckPersonalQueue:
+				// get curator name by discord id
+
+				if curator == nil {
+					fieldsMap[keys[i]] = "5curator not found"
+				} else {
+					// Create service
+					queueService := services.NewQueueService()
+
+					// Call service
+					queue, err := queueService.GetQueue(models.GlobalQueue, curator)
+					if err != nil {
+						fieldsMap[keys[i]] = "5queue not available"
+					} else {
+						if queue.Count > 5 {
+							fieldsMap[keys[i]] = "4your queue is full - please try again soon"
+						} else {
+							fieldsMap[keys[i]] = "2your queue is okay"
+						}
+					}
+				}
+			case enums.CheckPersonalCurations:
+				if curator == nil {
+					fieldsMap[keys[i]] = "5curator not found"
+				} else {
+					if curator.CountCurationsInInterval > 5 {
+						fieldsMap[keys[i]] = "4you made too many curations today"
+					} else {
+						fieldsMap[keys[i]] = "2you can still curate"
+					}
+				}
+			case enums.CheckWordCount:
 				// TODO: actually query the database here
 				dbError := mySqlTools.PingDB()
 				if dbError != nil {
@@ -104,35 +176,7 @@ func CheckLinkHandler(b *era2bot.Bot) handler.CommandHandler {
 				} else {
 					fieldsMap[keys[i]] = "2database is online"
 				}
-
-			} else if k == "global queue" {
-				// TODO: actually query the database here
-				dbError := mySqlTools.PingDB()
-				if dbError != nil {
-					fieldsMap[keys[i]] = "4database is not online"
-				} else {
-					fieldsMap[keys[i]] = "2database is online"
-				}
-
-			} else if k == "your queue" {
-				// TODO: actually query the database here
-				dbError := mySqlTools.PingDB()
-				if dbError != nil {
-					fieldsMap[keys[i]] = "4database is not online"
-				} else {
-					fieldsMap[keys[i]] = "2database is online"
-				}
-
-			} else if k == "your curations" {
-				// TODO: actually query the database here
-				dbError := mySqlTools.PingDB()
-				if dbError != nil {
-					fieldsMap[keys[i]] = "4database is not online"
-				} else {
-					fieldsMap[keys[i]] = "2database is online"
-				}
-
-			} else {
+			case enums.CheckPlagiarismCheck:
 				print(permlink)
 				// do some checks here
 				time.Sleep(1 * time.Second)

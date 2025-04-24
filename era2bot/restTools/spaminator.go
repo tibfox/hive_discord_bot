@@ -45,6 +45,6 @@ func CheckSpaminator(author *string) string {
 	if found {
 		return "4author blacklisted"
 	} else {
-		return "2author not blacklisted"
+		return "2author is okay"
 	}
 }

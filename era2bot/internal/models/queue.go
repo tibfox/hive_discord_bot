@@ -10,5 +10,5 @@ const (
 
 type Queue struct {
 	Type  QueueType
-	Count string
+	Count int
 }
