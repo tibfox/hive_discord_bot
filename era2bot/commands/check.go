@@ -7,11 +7,11 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 
-	"github.com/disgoorg/bot-template/bottemplate"
-	"github.com/disgoorg/bot-template/bottemplate/hiveTools"
-	"github.com/disgoorg/bot-template/bottemplate/messageTools"
-	"github.com/disgoorg/bot-template/bottemplate/mySqlTools"
-	"github.com/disgoorg/bot-template/bottemplate/restTools"
+	"github.com/disgoorg/bot-template/era2bot"
+	"github.com/disgoorg/bot-template/era2bot/hiveTools"
+	"github.com/disgoorg/bot-template/era2bot/messageTools"
+	"github.com/disgoorg/bot-template/era2bot/mySqlTools"
+	"github.com/disgoorg/bot-template/era2bot/restTools"
 )
 
 // Command definition (registers it to Discord)
@@ -28,7 +28,7 @@ var checklink = discord.SlashCommandCreate{
 }
 
 // Handler for the command
-func CheckLinkHandler(b *bottemplate.Bot) handler.CommandHandler {
+func CheckLinkHandler(b *era2bot.Bot) handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
 		url := e.SlashCommandInteractionData().String("url")
 		keys := []string{
@@ -98,38 +98,38 @@ func CheckLinkHandler(b *bottemplate.Bot) handler.CommandHandler {
 				fieldsMap[keys[i]] = postAgeReturnValue
 			} else if k == "internal blacklist" {
 				// TODO: actually query the database here
-				dbOnline := mySqlTools.OpenDB()
-				if dbOnline {
-					fieldsMap[keys[i]] = "2database is online"
-				} else {
+				dbError := mySqlTools.PingDB()
+				if dbError != nil {
 					fieldsMap[keys[i]] = "4database is not online"
+				} else {
+					fieldsMap[keys[i]] = "2database is online"
 				}
 
 			} else if k == "global queue" {
 				// TODO: actually query the database here
-				dbOnline := mySqlTools.OpenDB()
-				if dbOnline {
-					fieldsMap[keys[i]] = "2database is online"
-				} else {
+				dbError := mySqlTools.PingDB()
+				if dbError != nil {
 					fieldsMap[keys[i]] = "4database is not online"
+				} else {
+					fieldsMap[keys[i]] = "2database is online"
 				}
 
 			} else if k == "your queue" {
 				// TODO: actually query the database here
-				dbOnline := mySqlTools.OpenDB()
-				if dbOnline {
-					fieldsMap[keys[i]] = "2database is online"
-				} else {
+				dbError := mySqlTools.PingDB()
+				if dbError != nil {
 					fieldsMap[keys[i]] = "4database is not online"
+				} else {
+					fieldsMap[keys[i]] = "2database is online"
 				}
 
 			} else if k == "your curations" {
 				// TODO: actually query the database here
-				dbOnline := mySqlTools.OpenDB()
-				if dbOnline {
-					fieldsMap[keys[i]] = "2database is online"
-				} else {
+				dbError := mySqlTools.PingDB()
+				if dbError != nil {
 					fieldsMap[keys[i]] = "4database is not online"
+				} else {
+					fieldsMap[keys[i]] = "2database is online"
 				}
 
 			} else {

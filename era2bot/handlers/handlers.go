@@ -5,10 +5,10 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 
-	"github.com/disgoorg/bot-template/bottemplate"
+	"github.com/disgoorg/bot-template/era2bot"
 )
 
-func MessageHandler(b *bottemplate.Bot) bot.EventListener {
+func MessageHandler(b *era2bot.Bot) bot.EventListener {
 	return bot.NewListenerFunc(func(e *events.MessageCreate) {
 		if e.Message.Author.Bot {
 			return

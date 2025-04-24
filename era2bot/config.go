@@ -1,4 +1,4 @@
-package bottemplate
+package era2bot
 
 import (
 	"fmt"

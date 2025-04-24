@@ -9,8 +9,8 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 
-	"github.com/disgoorg/bot-template/bottemplate"
-	"github.com/disgoorg/bot-template/bottemplate/messageTools"
+	"github.com/disgoorg/bot-template/era2bot"
+	"github.com/disgoorg/bot-template/era2bot/messageTools"
 )
 
 var version = discord.SlashCommandCreate{
@@ -18,7 +18,7 @@ var version = discord.SlashCommandCreate{
 	Description: "version command",
 }
 
-func VersionHandler(b *bottemplate.Bot) handler.CommandHandler {
+func VersionHandler(b *era2bot.Bot) handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
 
 		owner := "tibfox"

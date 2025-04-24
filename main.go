@@ -12,10 +12,11 @@ import (
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/handler"
 
-	"github.com/disgoorg/bot-template/bottemplate"
-	"github.com/disgoorg/bot-template/bottemplate/commands"
-	"github.com/disgoorg/bot-template/bottemplate/components"
-	"github.com/disgoorg/bot-template/bottemplate/handlers"
+	"github.com/disgoorg/bot-template/era2bot"
+	"github.com/disgoorg/bot-template/era2bot/commands"
+	"github.com/disgoorg/bot-template/era2bot/components"
+	"github.com/disgoorg/bot-template/era2bot/handlers"
+	"github.com/disgoorg/bot-template/era2bot/mySqlTools"
 )
 
 var (
@@ -28,17 +29,20 @@ func main() {
 	path := flag.String("config", "config.toml", "path to config")
 	flag.Parse()
 
-	cfg, err := bottemplate.LoadConfig(*path)
+	cfg, err := era2bot.LoadConfig(*path)
 	if err != nil {
 		slog.Error("Failed to read config", slog.Any("err", err))
 		os.Exit(-1)
 	}
 
 	setupLogger(cfg.Log)
+	slog.Info("Initializing mysql connection")
+	mySqlTools.InitDB("user:pass@tcp(localhost:3306)/dbname")
+	defer mySqlTools.DB.Close()
 	slog.Info("Starting bot-template...", slog.String("version", Version), slog.String("commit", Commit))
 	slog.Info("Syncing commands", slog.Bool("sync", *shouldSyncCommands))
 
-	b := bottemplate.New(*cfg, Version, Commit)
+	b := era2bot.New(*cfg, Version, Commit)
 
 	h := handler.New()
 	h.Command("/test", commands.TestHandler)
@@ -80,7 +84,7 @@ func main() {
 	slog.Info("Shutting down bot...")
 }
 
-func setupLogger(cfg bottemplate.LogConfig) {
+func setupLogger(cfg era2bot.LogConfig) {
 	opts := &slog.HandlerOptions{
 		AddSource: cfg.AddSource,
 		Level:     cfg.Level,
